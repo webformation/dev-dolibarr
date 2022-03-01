@@ -891,7 +891,7 @@ class Commande extends CommonOrder
 	 */
 	public function create($user, $notrigger = 0)
 	{
-		global $conf, $langs;
+		global $conf, $langs, $mysoc;
 		$error = 0;
 
 		// Clean parameters
@@ -1051,7 +1051,9 @@ class Commande extends CommonOrder
 						$line->array_options,
 						$line->fk_unit,
 	                    $origintype,
-	                    $originid
+	                    $originid,
+                    	0,
+                    	1
 					);
 					if ($result < 0)
 					{
@@ -1069,6 +1071,8 @@ class Commande extends CommonOrder
 						$fk_parent_line = $result;
 					}
 				}
+
+				$result = $this->update_price(1, 'auto', 0, $mysoc); // This method is designed to add line from user input so total calculation must be done using 'auto' mode.
 
 				// update ref
 				$initialref = '(PROV'.$this->id.')';
@@ -1457,6 +1461,7 @@ class Commande extends CommonOrder
 	 * 	@param		string		    $origin				Depend on global conf MAIN_CREATEFROM_KEEP_LINE_ORIGIN_INFORMATION can be 'orderdet', 'propaldet'..., else 'order','propal,'....
 	 *  @param		int			    $origin_id			Depend on global conf MAIN_CREATEFROM_KEEP_LINE_ORIGIN_INFORMATION can be Id of origin object (aka line id), else object id
 	 * 	@param		double			$pu_ht_devise		Unit price in currency
+	 *  @param		int				$noupdateafterinsertline	No update after insert of line
 	 *	@return     int             					>0 if OK, <0 if KO
 	 *
 	 *	@see        add_product()
@@ -1466,7 +1471,7 @@ class Commande extends CommonOrder
 	 *	par l'appelant par la methode get_default_tva(societe_vendeuse,societe_acheteuse,produit)
 	 *	et le desc doit deja avoir la bonne valeur (a l'appelant de gerer le multilangue)
 	 */
-	public function addline($desc, $pu_ht, $qty, $txtva, $txlocaltax1 = 0, $txlocaltax2 = 0, $fk_product = 0, $remise_percent = 0, $info_bits = 0, $fk_remise_except = 0, $price_base_type = 'HT', $pu_ttc = 0, $date_start = '', $date_end = '', $type = 0, $rang = -1, $special_code = 0, $fk_parent_line = 0, $fk_fournprice = null, $pa_ht = 0, $label = '', $array_options = 0, $fk_unit = null, $origin = '', $origin_id = 0, $pu_ht_devise = 0)
+	public function addline($desc, $pu_ht, $qty, $txtva, $txlocaltax1 = 0, $txlocaltax2 = 0, $fk_product = 0, $remise_percent = 0, $info_bits = 0, $fk_remise_except = 0, $price_base_type = 'HT', $pu_ttc = 0, $date_start = '', $date_end = '', $type = 0, $rang = -1, $special_code = 0, $fk_parent_line = 0, $fk_fournprice = null, $pa_ht = 0, $label = '', $array_options = 0, $fk_unit = null, $origin = '', $origin_id = 0, $pu_ht_devise = 0, $noupdateafterinsertline = 0)
 	{
 		global $mysoc, $conf, $langs, $user;
 
@@ -1660,7 +1665,10 @@ class Commande extends CommonOrder
 				if (!empty($fk_parent_line)) $this->line_order(true, 'DESC');
 
 				// Mise a jour informations denormalisees au niveau de la commande meme
-				$result = $this->update_price(1, 'auto', 0, $mysoc); // This method is designed to add line from user input so total calculation must be done using 'auto' mode.
+				if (empty($noupdateafterinsertline)) {
+					$result = $this->update_price(1, 'auto', 0, $mysoc); // This method is designed to add line from user input so total calculation must be done using 'auto' mode.
+				}
+
 				if ($result > 0)
 				{
 					$this->db->commit();
